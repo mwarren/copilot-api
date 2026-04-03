@@ -13,6 +13,11 @@ import { pollAccessToken } from "~/services/github/poll-access-token"
 import { HTTPError } from "./error"
 import { state } from "./state"
 
+const maskToken = (token: string): string => {
+  if (token.length <= 8) return "****"
+  return `${token.slice(0, 8)}...${token.slice(-4)}`
+}
+
 let copilotRefreshLoopController: AbortController | null = null
 
 export const stopCopilotRefreshLoop = () => {
@@ -37,7 +42,7 @@ export const setupCopilotToken = async () => {
 
     consola.debug("GitHub Copilot token set from opencode auth token")
     if (state.showToken) {
-      consola.info("Copilot token:", state.copilotToken)
+      consola.info("Copilot token:", maskToken(state.copilotToken))
     }
 
     stopCopilotRefreshLoop()
@@ -50,7 +55,7 @@ export const setupCopilotToken = async () => {
   // Display the Copilot token to the screen
   consola.debug("GitHub Copilot Token fetched successfully!")
   if (state.showToken) {
-    consola.info("Copilot token:", token)
+    consola.info("Copilot token:", maskToken(token))
   }
 
   stopCopilotRefreshLoop()
@@ -85,7 +90,7 @@ const runCopilotRefreshLoop = async (
       state.copilotToken = token
       consola.debug("Copilot token refreshed")
       if (state.showToken) {
-        consola.info("Refreshed Copilot token:", token)
+        consola.info("Refreshed Copilot token:", maskToken(token))
       }
 
       nextRefreshDelayMs = (refresh_in - 60) * 1000
@@ -110,7 +115,7 @@ export async function setupGitHubToken(
     if (githubToken && !options?.force) {
       state.githubToken = githubToken
       if (state.showToken) {
-        consola.info("GitHub token:", githubToken)
+        consola.info("GitHub token:", maskToken(githubToken))
       }
       await logUser()
 
@@ -130,7 +135,7 @@ export async function setupGitHubToken(
     state.githubToken = token
 
     if (state.showToken) {
-      consola.info("GitHub token:", token)
+      consola.info("GitHub token:", maskToken(token))
     }
     await logUser()
   } catch (error) {
