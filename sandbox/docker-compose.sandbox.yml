@@ -33,12 +33,16 @@ services:
     cap_drop:
       - ALL
     cap_add:
+      - CHOWN
       - NET_BIND_SERVICE
+      - SETUID
+      - SETGID
     read_only: true
     tmpfs:
       - /var/cache/nginx:size=16m
       - /var/run:size=1m
       - /tmp:size=8m
+      - /etc/nginx/conf.d:size=1m
     security_opt:
       - no-new-privileges:true
 
