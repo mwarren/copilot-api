@@ -1,6 +1,7 @@
 import type { Context, MiddlewareHandler } from "hono"
 
 import consola from "consola"
+import { createHash, timingSafeEqual } from "node:crypto"
 
 import { getConfig } from "./config"
 
@@ -57,6 +58,14 @@ export function extractRequestApiKey(c: Context): string | null {
   return bearerToken || null
 }
 
+function sha256(value: string): Buffer {
+  return createHash("sha256").update(value).digest()
+}
+
+function safeEqual(a: string, b: string): boolean {
+  return timingSafeEqual(sha256(a), sha256(b))
+}
+
 function createUnauthorizedResponse(c: Context): Response {
   c.header("WWW-Authenticate", 'Bearer realm="copilot-api"')
   return c.json(
@@ -88,7 +97,7 @@ export function createAuthMiddleware(
 
     const apiKeys = getApiKeys()
     const requestApiKey = extractRequestApiKey(c)
-    if (!requestApiKey || !apiKeys.includes(requestApiKey)) {
+    if (!requestApiKey || !apiKeys.some((key) => safeEqual(key, requestApiKey))) {
       return createUnauthorizedResponse(c)
     }
 
