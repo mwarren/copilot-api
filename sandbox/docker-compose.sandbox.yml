@@ -1,11 +1,16 @@
 # Sandboxed deployment of copilot-api
 #
 # Network topology:
-#   copilot-api (restricted) ---> squid (restricted + egress) ---> internet
+#   client ---> nginx (ingress + restricted) ---> copilot-api (restricted) ---> squid (restricted + egress) ---> internet
 #
-# The "restricted" network has internal: true, meaning containers on it
-# cannot reach the internet directly. The only path out is through squid,
-# which enforces a strict domain allowlist.
+# Three networks provide layered isolation:
+#   - ingress: non-internal, allows clients on the host to reach nginx via published ports
+#   - restricted: internal-only network for nginx <-> copilot-api <-> squid
+#   - egress: allows squid (and only squid) to reach the internet
+#
+# copilot-api is ONLY on the restricted (internal) network. It cannot reach
+# the internet directly. All outbound traffic is forced through squid, which
+# enforces a strict domain allowlist.
 #
 # Usage:
 #   docker compose -f sandbox/docker-compose.sandbox.yml up --build
@@ -14,6 +19,29 @@
 # or set it in a .env file alongside this compose file).
 
 services:
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "${COPILOT_API_PORT:-4141}:4141"
+    networks:
+      - ingress
+      - restricted
+    depends_on:
+      - copilot-api
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=16m
+      - /var/run:size=1m
+      - /tmp:size=8m
+    security_opt:
+      - no-new-privileges:true
+
   squid:
     image: ubuntu/squid:latest
     volumes:
@@ -44,8 +72,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    ports:
-      - "${COPILOT_API_PORT:-4141}:4141"
+    # No published ports -- only reachable via nginx on the restricted network
     environment:
       - GH_TOKEN=${GH_TOKEN}
       - COPILOT_API_HOME=/data
@@ -57,7 +84,7 @@ services:
       - copilot-data:/data
     networks:
       - restricted
-    # NO egress network -- copilot-api cannot reach the internet directly
+    # ONLY on restricted (internal) network -- no internet access
     depends_on:
       squid:
         condition: service_healthy
@@ -76,6 +103,8 @@ volumes:
     # Persists github_token and config.json across container restarts
 
 networks:
+  ingress:
+    # Non-internal so published ports work. Only nginx is exposed here.
   restricted:
     # internal: true means containers on this network CANNOT reach
     # external networks. This is the key security control.
