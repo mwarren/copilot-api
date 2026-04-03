@@ -48,10 +48,13 @@ services:
       - "${COPILOT_API_PORT:-4141}:4141"
     environment:
       - GH_TOKEN=${GH_TOKEN}
+      - COPILOT_API_HOME=/data
       # Route ALL traffic through the squid proxy
       - HTTPS_PROXY=http://squid:3128
       - HTTP_PROXY=http://squid:3128
       - NO_PROXY=localhost,127.0.0.1
+    volumes:
+      - copilot-data:/data
     networks:
       - restricted
     # NO egress network -- copilot-api cannot reach the internet directly
@@ -64,10 +67,13 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=64m
-      - /app/.copilot-api:size=16m
     # Security options
     security_opt:
       - no-new-privileges:true
+
+volumes:
+  copilot-data:
+    # Persists github_token and config.json across container restarts
 
 networks:
   restricted:
