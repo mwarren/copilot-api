@@ -12,7 +12,6 @@ import { modelRoutes } from "./routes/models/route"
 import { providerMessageRoutes } from "./routes/provider/messages/route"
 import { providerModelRoutes } from "./routes/provider/models/route"
 import { responsesRoutes } from "./routes/responses/route"
-import { tokenRoute } from "./routes/token/route"
 import { usageRoute } from "./routes/usage/route"
 
 export const server = new Hono()
@@ -52,7 +51,6 @@ server.use(
   }),
 )
 server.route("/usage", usageRoute)
-server.route("/token", tokenRoute)
 server.route("/responses", responsesRoutes)
 
 // Compatibility with tools that expect v1/ prefix
