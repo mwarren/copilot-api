@@ -6,7 +6,8 @@ import consola from "consola"
 import { serve, type ServerHandler } from "srvx"
 import invariant from "tiny-invariant"
 
-import { mergeConfigWithDefaults } from "./lib/config"
+import { mergeConfigWithDefaults, getConfig } from "./lib/config"
+import { normalizeApiKeys } from "./lib/request-auth"
 import { ensurePaths } from "./lib/paths"
 import { initProxyFromEnv } from "./lib/proxy"
 import { generateEnvScript } from "./lib/shell"
@@ -35,6 +36,15 @@ interface RunServerOptions {
 export async function runServer(options: RunServerOptions): Promise<void> {
   // Ensure config is merged with defaults at startup
   mergeConfigWithDefaults()
+
+  const apiKeys = normalizeApiKeys(getConfig().auth?.apiKeys)
+  if (apiKeys.length === 0) {
+    consola.error(
+      "No API keys configured. At least one key is required in auth.apiKeys in your config file.\n"
+        + "Add an API key to your config and use it when connecting clients to this proxy.",
+    )
+    process.exit(1)
+  }
 
   if (options.proxyEnv) {
     initProxyFromEnv()

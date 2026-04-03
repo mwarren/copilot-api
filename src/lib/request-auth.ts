@@ -87,10 +87,6 @@ export function createAuthMiddleware(
     }
 
     const apiKeys = getApiKeys()
-    if (apiKeys.length === 0) {
-      return next()
-    }
-
     const requestApiKey = extractRequestApiKey(c)
     if (!requestApiKey || !apiKeys.includes(requestApiKey)) {
       return createUnauthorizedResponse(c)
