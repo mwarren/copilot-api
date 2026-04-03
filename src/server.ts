@@ -19,7 +19,6 @@ export const server = new Hono()
 
 server.use(traceIdMiddleware)
 server.use(logger())
-server.use(cors())
 server.use(
   "*",
   createAuthMiddleware({
@@ -37,6 +36,21 @@ server.get("/usage-viewer/", (c) => c.redirect("/usage-viewer", 301))
 server.route("/chat/completions", completionRoutes)
 server.route("/models", modelRoutes)
 server.route("/embeddings", embeddingRoutes)
+server.use(
+  "/usage",
+  cors({
+    origin: (origin) => {
+      try {
+        const url = new URL(origin)
+        return url.hostname === "localhost" || url.hostname === "127.0.0.1"
+          ? origin
+          : null
+      } catch {
+        return null
+      }
+    },
+  }),
+)
 server.route("/usage", usageRoute)
 server.route("/token", tokenRoute)
 server.route("/responses", responsesRoutes)
